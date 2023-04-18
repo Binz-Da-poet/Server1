@@ -1,21 +1,22 @@
 package com.example.ShopeeClone.controller;
 
+import com.example.ShopeeClone.entity.Category;
 import com.example.ShopeeClone.entity.Product;
 import com.example.ShopeeClone.entity.ResponseObject;
+import com.example.ShopeeClone.repositories.CategoryRepositories;
 import com.example.ShopeeClone.repositories.ProductsRepositories;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-
 import javax.validation.Valid;
-
-import java.time.LocalDateTime;
 import java.util.Date;
-import java.util.List;
 import java.util.Optional;
 
 
@@ -27,21 +28,62 @@ public class ProductController {
     @Autowired
     private ProductsRepositories productsRepositories;
 
+    @Autowired
+    private CategoryRepositories categoryRepository;
 
     @GetMapping("")
-
     public ResponseEntity<ResponseObject> getAllProducts(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(defaultValue = "createdAt") String sort_by,
-            @RequestParam(defaultValue = "desc") String order
+            @RequestParam(defaultValue = "desc") String order,
+            @RequestParam(required = false) Long categoryId, // thêm tham số category_id
+            @RequestParam(required = false) Integer rating, // thêm tham số rating
+            @RequestParam(required = false) Integer price_min, // thêm tham số price_min
+            @RequestParam(required = false) Integer price_max // thêm tham số price_max
     ) {
-        Sort sort = order.equals("asc") ? Sort.by(sort_by).ascending() : Sort.by(sort_by).descending();
-        Pageable pageable = PageRequest.of(page - 1, limit, sort);
-        Page<Product> productPage = productsRepositories.findAll(pageable);
+        Sort sort;
+        if (categoryId != null) {
+            Category category = categoryRepository.findById(categoryId).orElse(null);
+            if (category == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        new ResponseObject("failed", "cannot found category", "")
+                );
+            }
+            sort = order.equals("asc") ? Sort.by(sort_by).ascending().and(Sort.by("category.name").ascending()) :
+                    Sort.by(sort_by).descending().and(Sort.by("category.name").ascending());
+
+        } else if (rating != null) {
+            sort = order.equals("asc") ? Sort.by("rating").ascending() : Sort.by("rating").descending();
+        } else if (price_min != null && price_max != null) {
+            sort = order.equals("asc") ? Sort.by("price").ascending() : Sort.by("price").descending();
+        } else {
+            sort = order.equals("asc") ? Sort.by(sort_by).ascending() : Sort.by(sort_by).descending();
+        }
+
+
+        Page<Product> productPage;
+        if (price_min != null && price_max != null) {
+            Pageable pageable = PageRequest.of(page - 1, limit, sort);
+            productPage = categoryId != null ?
+                    productsRepositories.findAllByCategoryAndPriceBetween(categoryRepository.findById(categoryId).orElse(null), price_min, price_max, pageable) :
+                    productsRepositories.findAllByPriceBetween(price_min, price_max, pageable);
+        } else if (rating != null) {
+            Pageable pageable = PageRequest.of(page - 1, limit, sort);
+            productPage = categoryId != null ?
+                    productsRepositories.findAllByCategoryAndRatingGreaterThanEqual(categoryRepository.findById(categoryId).orElse(null), rating, pageable) :
+                    productsRepositories.findAllByRatingGreaterThanEqual(rating, pageable);
+        } else {
+            Pageable pageable = PageRequest.of(page - 1, limit, sort);
+            productPage = categoryId != null ?
+                    productsRepositories.findAllByCategory(categoryRepository.findById(categoryId).orElse(null), pageable) :
+                    productsRepositories.findAll(pageable);
+        }
         ResponseObject response = new ResponseObject("success", "Retrieved all products", productPage);
         return ResponseEntity.ok(response);
+
     }
+
 
     @PostMapping(value = "/add")
     public ResponseEntity<ResponseObject> addProduct(@RequestBody Product newProduct) {
@@ -54,14 +96,11 @@ public class ProductController {
     }
 
 
-
-
-
     @PutMapping("/{id}")
     public ResponseEntity<ResponseObject> updateProduct(@PathVariable Long id, @RequestBody @Valid Product updatedProduct) {
         Optional<Product> optionalProduct = productsRepositories.findById(id);
-        if (!optionalProduct.isPresent()) {
-            return  ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+        if (optionalProduct.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     new ResponseObject("failed", "cannot found product", "")
             );
         }
@@ -78,7 +117,7 @@ public class ProductController {
 
 
         productsRepositories.save(product);
-        return  ResponseEntity.status(HttpStatus.OK).body(
+        return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject("OK", "Update successfully", "")
         );
     }

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Controller
+@CrossOrigin
 @RequestMapping(path = "/api/v1/category")
 public class CategoryController {
 
@@ -24,7 +25,7 @@ public class CategoryController {
         public ResponseEntity<ResponseObject> getAllCategory(){
             List<Category> categories = categoryRepositories.findAll();
             return ResponseEntity.status(HttpStatus.OK).body(
-                    new ResponseObject("ok ", " đã add product thành công ", categories)
+                    new ResponseObject("ok ", " get All category ", categories)
             );
         }
         @PostMapping("/add")
