@@ -13,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Controller
 @CrossOrigin
-@RequestMapping(path = "/api/v1/auth/FileUpload")
+@RequestMapping(path = "/api/v1/FileUpload")
 
 public class FileUploadController {
 

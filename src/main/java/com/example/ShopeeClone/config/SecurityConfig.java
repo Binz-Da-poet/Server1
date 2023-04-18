@@ -7,13 +7,9 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
-import java.util.Arrays;
 
 
 @Configuration
@@ -32,9 +28,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                .cors().and().csrf().and()
+                .cors().and().csrf().disable()
                 .authorizeHttpRequests()
-                .requestMatchers("/api/v1/auth/**","/uploads/**","/api/v1/auth/FileUpload/files/**","/api/v1/category","/api/v1/Products")
+                .requestMatchers("/api/v1/auth/**","/uploads/**","/api/v1/FileUpload/files/**","/api/v1/category","/api/v1/Products")
                 .permitAll()
                 .anyRequest()
                 .authenticated()
