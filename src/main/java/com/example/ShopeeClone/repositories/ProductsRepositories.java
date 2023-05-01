@@ -24,4 +24,8 @@ public interface ProductsRepositories  extends JpaRepository<Product,Long> {
     Page<Product> findAllByCategoryAndRatingGreaterThanEqual(Category orElse, Integer rating, Pageable pageable);
 
     Page<Product> findAllByRatingGreaterThanEqual(Integer rating, Pageable pageable);
+
+    Page<Product> findAllByCategoryAndNameContainingIgnoreCase(Category orElse, String name, Pageable pageable);
+
+    Page<Product> findAllByNameContainingIgnoreCase(String name, Pageable pageable);
 }

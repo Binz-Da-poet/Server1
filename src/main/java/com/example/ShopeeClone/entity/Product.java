@@ -28,7 +28,7 @@ public class Product {
     private int quantity;
     @Column(name="view")
     private int view;
-    @Column(name = "description")
+    @Column(name = "description",length = 3000)
     private String description;
     @Column(name="createdAt")
     private Date createdAt;
@@ -36,7 +36,7 @@ public class Product {
     private Date updatedAt;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
-    private Category category;
 
+    private Category category;
 
 }

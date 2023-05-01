@@ -47,7 +47,7 @@ public class AuthenticationController {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getPhoneNumber())
-                .role(Role.USER)
+                .role(Role.ROLE_USER)
                 .build();
         userRepositories.save(user);
         var jwtToken = jwtService.generateToken(user);

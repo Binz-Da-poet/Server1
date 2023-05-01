@@ -1,5 +1,6 @@
 package com.example.ShopeeClone.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -8,7 +9,7 @@ import lombok.Data;
 @Data
 public class CartItem {
     @Id
-    @GeneratedValue(strategy =GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
     @ManyToOne
@@ -17,9 +18,10 @@ public class CartItem {
 
     @Column(nullable = false)
     private Integer quantity;
-
+    private Integer status;
     @ManyToOne
     @JoinColumn(name = "shopping_cart_id")
+    @JsonIgnore
     private ShoppingCart shoppingCart;
 
 

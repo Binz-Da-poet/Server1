@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,16 +32,18 @@ public class ProductController {
     @Autowired
     private CategoryRepositories categoryRepository;
 
+
     @GetMapping("")
     public ResponseEntity<ResponseObject> getAllProducts(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "100") int limit,
             @RequestParam(defaultValue = "createdAt") String sort_by,
             @RequestParam(defaultValue = "desc") String order,
             @RequestParam(required = false) Long categoryId, // thêm tham số category_id
             @RequestParam(required = false) Integer rating, // thêm tham số rating
             @RequestParam(required = false) Integer price_min, // thêm tham số price_min
-            @RequestParam(required = false) Integer price_max // thêm tham số price_max
+            @RequestParam(required = false) Integer price_max, // thêm tham số price_max
+            @RequestParam(required = false) String name //them tham so name
     ) {
         Sort sort;
         if (categoryId != null) {
@@ -57,6 +60,8 @@ public class ProductController {
             sort = order.equals("asc") ? Sort.by("rating").ascending() : Sort.by("rating").descending();
         } else if (price_min != null && price_max != null) {
             sort = order.equals("asc") ? Sort.by("price").ascending() : Sort.by("price").descending();
+        } else if (name != null) {
+            sort = order.equals("asc") ? Sort.by("name").ascending() : Sort.by("name").descending();
         } else {
             sort = order.equals("asc") ? Sort.by(sort_by).ascending() : Sort.by(sort_by).descending();
         }
@@ -73,6 +78,11 @@ public class ProductController {
             productPage = categoryId != null ?
                     productsRepositories.findAllByCategoryAndRatingGreaterThanEqual(categoryRepository.findById(categoryId).orElse(null), rating, pageable) :
                     productsRepositories.findAllByRatingGreaterThanEqual(rating, pageable);
+        } else if (name != null) {
+            Pageable pageable = PageRequest.of(page - 1, limit, sort);
+            productPage = categoryId != null ?
+                    productsRepositories.findAllByCategoryAndNameContainingIgnoreCase(categoryRepository.findById(categoryId).orElse(null), name, pageable) :
+                    productsRepositories.findAllByNameContainingIgnoreCase(name, pageable);
         } else {
             Pageable pageable = PageRequest.of(page - 1, limit, sort);
             productPage = categoryId != null ?
@@ -84,18 +94,28 @@ public class ProductController {
 
     }
 
-
+    @GetMapping("/{id}")
+    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
+        Optional<Product> findProduct = productsRepositories.findById(id);
+        if (findProduct.isPresent()) {
+            return ResponseEntity.ok(findProduct.get());
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/add")
     public ResponseEntity<ResponseObject> addProduct(@RequestBody Product newProduct) {
         newProduct.setCreatedAt(new Date());
         productsRepositories.save(newProduct);
+
 
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject("ok ", " đã add product thành công ", newProduct)
         );
     }
 
-
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<ResponseObject> updateProduct(@PathVariable Long id, @RequestBody @Valid Product updatedProduct) {
         Optional<Product> optionalProduct = productsRepositories.findById(id);
@@ -122,7 +142,7 @@ public class ProductController {
         );
     }
 
-
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<ResponseObject> deleteProductByid(@PathVariable Long id) {
         Optional<Product> existProduct = productsRepositories.findById(id);

@@ -1,29 +1,54 @@
 package com.example.ShopeeClone.config;
 
+import com.example.ShopeeClone.entity.User;
+import com.example.ShopeeClone.repositories.UserRepositories;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import javax.security.sasl.AuthenticationException;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 @Service
 public class JwtService {
     private static final String SECRET_KEY = "7234743777217A25432A462D4A614E645267556B58703273357638782F413F44";
-
+    @Autowired
+    private UserRepositories userRepositories;
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-
+    public User authenticateUser(HttpServletRequest request) throws AuthenticationException {
+        final String authHeader = request.getHeader("Authorization");
+        final String jwt;
+        final String userEmail;
+        if (authHeader == null || !authHeader.startsWith("Bearer")) {
+            throw new AuthenticationException("sai token");
+        }
+        jwt = authHeader.substring(7);
+        userEmail = extractUsername(jwt);
+        if (userEmail != null) {
+            Optional<User> existedUser = userRepositories.findByEmail(userEmail);
+            User user = existedUser.orElseThrow(() -> new AuthenticationException("User not found"));
+            if (!isTokenValid(jwt, user)) {
+                throw new AuthenticationException("sai token");
+            }
+            return user;
+        }
+        throw new AuthenticationException("sai token");
+    }
 //    Phương thức extractClaim() trong mã nguồn của Spring Security JWT dùng để lấy ra một claim (thuộc tính)
 //    trong payload của JWT bằng cách truyền vào token (chuỗi JWT) và một claimsResolver (hàm xử lý claims)
 //    nhận vào đối tượng Claims và trả về kiểu dữ liệu T.

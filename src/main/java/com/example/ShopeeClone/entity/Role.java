@@ -1,6 +1,6 @@
 package com.example.ShopeeClone.entity;
 
 public enum Role {
-    ADMIN,
-    USER,
+    ROLE_ADMIN,
+    ROLE_USER,
 }

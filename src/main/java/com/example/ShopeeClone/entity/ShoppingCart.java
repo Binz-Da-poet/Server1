@@ -1,5 +1,6 @@
 package com.example.ShopeeClone.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -8,6 +9,7 @@ import java.util.List;
 @Entity
 @Table(name = "shopping_carts")
 @Data
+
 public class ShoppingCart {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -18,5 +20,6 @@ public class ShoppingCart {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     private User user;
 }

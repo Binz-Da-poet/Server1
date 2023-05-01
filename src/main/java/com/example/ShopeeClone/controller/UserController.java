@@ -1,65 +1,122 @@
 package com.example.ShopeeClone.controller;
 
-import com.example.ShopeeClone.Service.UserService;
-import com.example.ShopeeClone.entity.User;
+
+import com.example.ShopeeClone.config.JwtService;
+import com.example.ShopeeClone.entity.ChangePasswordRequest;
 import com.example.ShopeeClone.entity.ResponseObject;
-import com.example.ShopeeClone.entity.Role;
+import com.example.ShopeeClone.entity.User;
 import com.example.ShopeeClone.repositories.UserRepositories;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import javax.security.sasl.AuthenticationException;
+import java.util.Objects;
 import java.util.Optional;
 
+
 @Controller
-@RequestMapping(path = "/api/v1/User")
+@CrossOrigin
+@RequestMapping(path = "/api/v1/User" )
 
 public class UserController {
 
     @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
     private UserRepositories userRepositories;
-    @GetMapping("/{id}")
-    public ResponseEntity<ResponseObject> getUserById(@PathVariable Long id) {
-        Optional<User> user = userRepositories.findById(id);
-        return user.isPresent() ?
-                ResponseEntity.status(HttpStatus.OK).body(
-                        new ResponseObject("ok", "Query successfully", user)
-                ) : ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                new ResponseObject("failed", "user not exist", "")
-        );
-    }
+    @Autowired
+    private JwtService jwtService;
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
-    @PostMapping("/addUser")
-    public ResponseEntity<ResponseObject> addUser(@RequestBody User newUser) {
-        Optional<User> foundUser = userRepositories.findAllByEmailAndPhoneNumber(newUser.getEmail(), newUser.getPhoneNumber());
-        if (foundUser.isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    new ResponseObject("failed", "Email or PhoneNumber is already", "")
+    @GetMapping("/me" )
+    public ResponseEntity<ResponseObject> getUser(HttpServletRequest request) {
+        try {
+            UserDetails userDetails = jwtService.authenticateUser(request);
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    new ResponseObject("ok", "lấy profile thành công", userDetails)
+            );
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    new ResponseObject("failed", "sai token", "" )
             );
         }
-        return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject("ok", "Add Customer Successfully", userRepositories.save(newUser))
-        );
     }
 
-    @PostMapping("/update")
-    public ResponseEntity<ResponseObject> updateUser(@RequestBody User newUser) {
-        User existingUser = userRepositories.findById(newUser.getUserId()).orElseThrow(() -> new EntityNotFoundException("Customer not found"));
-        existingUser.setFullName(newUser.getFullName());
-        existingUser.setEmail(newUser.getEmail());
-        existingUser.setPhoneNumber(newUser.getPhoneNumber());
-        existingUser.setPassword(newUser.getPassword());
-        return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject("ok", "update successfully", userRepositories.save(existingUser))
-        );
+    @PostMapping("/update" )
+    public ResponseEntity<ResponseObject> updateUser(@RequestBody User newUser, HttpServletRequest request) {
+        try {
+            User user = jwtService.authenticateUser(request);
+            if (Objects.nonNull(newUser.getPhoneNumber())) {
+                user.setPhoneNumber(newUser.getPhoneNumber());
+            }
+            if (Objects.nonNull(newUser.getFullName())) {
+                user.setFullName(newUser.getFullName());
+            }
+            if (Objects.nonNull(newUser.getAddress())) {
+                user.setAddress(newUser.getAddress());
+            }
+            if (Objects.nonNull(newUser.getAvatar())) {
+                user.setAvatar(newUser.getAvatar());
+            }
+
+            userRepositories.save(user);
+            return ResponseEntity.status(HttpStatus.OK).body(
+                    new ResponseObject("ok", "Cập nhật thông tin thành công", user)
+            );
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    new ResponseObject("failed", "Token không hợp lệ", "" )
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    new ResponseObject("failed", "Lỗi server", "" )
+            );
+        }
     }
 
-    @DeleteMapping("/delete/{id}")
+
+    @PostMapping("/changePassword")
+    public ResponseEntity<ResponseObject> changePassWord(@RequestBody ChangePasswordRequest changePasswordRequest, HttpServletRequest request) {
+        Optional<User> user = Optional.of(new User());
+        try {
+            UserDetails userDetails = jwtService.authenticateUser(request);
+            user = userRepositories.findByEmail(userDetails.getUsername());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ResponseObject("failed", "sai token", ""));
+        }
+
+        try {
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
+                    user.get().getUsername(), changePasswordRequest.getPassword()
+            ));
+
+
+
+
+            User newUser = user.get();
+            newUser.setPassword(passwordEncoder.encode(changePasswordRequest.getNew_password()));
+            userRepositories.save(newUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(new ResponseObject("ok", "thay đổi mật khẩu thành công", ""));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ResponseObject("failed", "sai mật khẩu", ""));
+        }
+    }
+
+
+    @DeleteMapping("/delete/{id}" )
     public ResponseEntity<ResponseObject> deleteUser(@PathVariable Long id) {
-        User existingUser = userRepositories.findById(id).orElseThrow(() -> new EntityNotFoundException("Customer not found"));
+        User existingUser = userRepositories.findById(id).orElseThrow(() -> new EntityNotFoundException("Customer not found" ));
         userRepositories.delete(existingUser);
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject("ok", "Delete successfully", existingUser)
