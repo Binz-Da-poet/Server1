@@ -36,11 +36,13 @@ public class User implements UserDetails {
     private String avatar;
     @Enumerated(EnumType.STRING)
     private Role role;
+    @Enumerated(EnumType.STRING)
+    private Status status;
     @OneToMany(mappedBy = "user")
     private List<Order> orders;
 
-    @OneToMany(mappedBy = "user")
-    private List<ShoppingCart> shoppingCarts;
+    @OneToOne(mappedBy = "user")
+    private ShoppingCart shoppingCart;
 
 
     @Override
@@ -65,7 +67,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return this.status == Status.NonLocked;
     }
 
     @Override

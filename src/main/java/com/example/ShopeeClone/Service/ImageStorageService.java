@@ -26,7 +26,7 @@ public class ImageStorageService implements IStorageService {
         try {
             Files.createDirectories(storageFolder);
         } catch (IOException e) {
-            throw new RuntimeException("cannot initializa storage", e);
+            throw new RuntimeException("cannot initialize storage", e);
         }
     }
 
@@ -45,7 +45,8 @@ public class ImageStorageService implements IStorageService {
             if (!isImageFile(file)) {
                 throw new RuntimeException("You can only upload file");
             }
-            float fileSizeInMegabyte = file.getSize() / 1_000_000;
+            float FileSize = file.getSize();
+            float fileSizeInMegabyte = FileSize / 1_000_000;
             if (fileSizeInMegabyte > 5.0f) {
                 throw new RuntimeException("failed must be < 5Mb");
             }
@@ -78,8 +79,7 @@ public class ImageStorageService implements IStorageService {
             Path file = storageFolder.resolve(fileName);
             Resource resource = new UrlResource(file.toUri());
             if (resource.exists() || resource.isReadable()) {
-                byte[] bytes = StreamUtils.copyToByteArray(resource.getInputStream());
-                return bytes;
+                return StreamUtils.copyToByteArray(resource.getInputStream());
             } else {
                 throw new RuntimeException(
                         "could not read file " + fileName

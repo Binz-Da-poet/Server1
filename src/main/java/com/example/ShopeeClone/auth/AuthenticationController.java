@@ -3,7 +3,10 @@ package com.example.ShopeeClone.auth;
 
 import com.example.ShopeeClone.config.JwtService;
 import com.example.ShopeeClone.entity.Role;
+import com.example.ShopeeClone.entity.ShoppingCart;
+import com.example.ShopeeClone.entity.Status;
 import com.example.ShopeeClone.entity.User;
+import com.example.ShopeeClone.repositories.ShoppingCartRepositories;
 import com.example.ShopeeClone.repositories.UserRepositories;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -30,6 +33,7 @@ public class AuthenticationController {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+
     @PostMapping("/register")
     public ResponseEntity<AuthenticationResponse> register(
             @RequestBody RegisterRequest request
@@ -48,7 +52,9 @@ public class AuthenticationController {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getPhoneNumber())
                 .role(Role.ROLE_USER)
+                .status(Status.NonLocked)
                 .build();
+
         userRepositories.save(user);
         var jwtToken = jwtService.generateToken(user);
         return ResponseEntity.status(HttpStatus.OK).body(
@@ -70,7 +76,7 @@ public class AuthenticationController {
             );
 
             User user = userRepositories.findByEmail(request.getEmail()).orElseThrow();
-            var jwtToken= jwtService.generateToken(user);
+            var jwtToken = jwtService.generateToken(user);
             return ResponseEntity.status(HttpStatus.OK).body(
                     AuthenticationResponse.builder()
                             .token(jwtToken)

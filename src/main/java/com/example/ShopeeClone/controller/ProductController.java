@@ -1,8 +1,11 @@
 package com.example.ShopeeClone.controller;
 
+import com.example.ShopeeClone.Request.ProductsRequest;
+import com.example.ShopeeClone.entity.CartItem;
 import com.example.ShopeeClone.entity.Category;
 import com.example.ShopeeClone.entity.Product;
 import com.example.ShopeeClone.entity.ResponseObject;
+import com.example.ShopeeClone.repositories.CartItemRepositories;
 import com.example.ShopeeClone.repositories.CategoryRepositories;
 import com.example.ShopeeClone.repositories.ProductsRepositories;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +20,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 
@@ -31,7 +36,8 @@ public class ProductController {
 
     @Autowired
     private CategoryRepositories categoryRepository;
-
+    @Autowired
+    protected CartItemRepositories cartItemRepositories;
 
     @GetMapping("")
     public ResponseEntity<ResponseObject> getAllProducts(
@@ -95,36 +101,42 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
+    public ResponseEntity<ResponseObject> getProductById(@PathVariable Long id) {
         Optional<Product> findProduct = productsRepositories.findById(id);
-        if (findProduct.isPresent()) {
-            return ResponseEntity.ok(findProduct.get());
-        } else {
-            return ResponseEntity.notFound().build();
-        }
-    }
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/add")
-    public ResponseEntity<ResponseObject> addProduct(@RequestBody Product newProduct) {
-        newProduct.setCreatedAt(new Date());
-        productsRepositories.save(newProduct);
+        return findProduct.map(product -> ResponseEntity.status(HttpStatus.OK).body(
+                new ResponseObject("ok ", " đã lấy product thành công ", product)
+        )).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                new ResponseObject("failed", "cannot found product", "")
+        ));
 
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/add/{id}")
+    public ResponseEntity<ResponseObject> addProduct(@RequestBody Product product, @PathVariable Long id) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid category ID: " + id + product));
+        product.setCategory(category);
+        product.setCreatedAt(new Date());
+        productsRepositories.save(product);
 
         return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject("ok ", " đã add product thành công ", newProduct)
+                new ResponseObject("ok ", " đã add product thành công ", product)
         );
+
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}")
-    public ResponseEntity<ResponseObject> updateProduct(@PathVariable Long id, @RequestBody @Valid Product updatedProduct) {
+    @PutMapping("/update/{id}")
+    public ResponseEntity<ResponseObject> updateProduct(@PathVariable Long id, @RequestBody Product updatedProduct) {
         Optional<Product> optionalProduct = productsRepositories.findById(id);
         if (optionalProduct.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     new ResponseObject("failed", "cannot found product", "")
             );
         }
-
+        Category category = categoryRepository.findById(updatedProduct.getCategoryid())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid category ID: " + id + updatedProduct));
         Product product = optionalProduct.get();
         product.setName(updatedProduct.getName());
         product.setPrice(updatedProduct.getPrice());
@@ -134,6 +146,7 @@ public class ProductController {
         product.setQuantity(updatedProduct.getQuantity());
         product.setView(updatedProduct.getView());
         product.setDescription(updatedProduct.getDescription());
+        product.setCategory(category);
 
 
         productsRepositories.save(product);
@@ -143,13 +156,31 @@ public class ProductController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<ResponseObject> deleteProductByid(@PathVariable Long id) {
-        Optional<Product> existProduct = productsRepositories.findById(id);
-        return existProduct.isPresent() ? ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject("ok", "Deleted Product", existProduct)
-        ) : ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                new ResponseObject("failed", "cannot found product", "")
+    @DeleteMapping("/delete")
+    public ResponseEntity<ResponseObject> deleteProduct(@RequestBody ProductsRequest productsRequest) {
+        List<Long> productIds = productsRequest.getProductIds();
+        List<Product> productsToDelete = new ArrayList<>();
+        for (Long productId : productIds) {
+            Optional<Product> optionalProduct = productsRepositories.findById(productId);
+            if (optionalProduct.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        new ResponseObject("failed", "Cannot find product with ID " + productId, "")
+                );
+            }
+            Product product = optionalProduct.get();
+            Optional<CartItem> findcartItem = cartItemRepositories.findByProduct(product);
+            CartItem cartItem = new CartItem();
+            if (findcartItem.isPresent()) {
+                cartItem = findcartItem.get();
+                cartItemRepositories.delete(cartItem);
+            }
+
+            productsToDelete.add(product);
+        }
+        productsRepositories.deleteAll(productsToDelete);
+        return ResponseEntity.ok().body(
+                new ResponseObject("success", "Products deleted successfully", "")
         );
     }
+
 }

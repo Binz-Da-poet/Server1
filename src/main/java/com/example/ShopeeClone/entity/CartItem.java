@@ -12,13 +12,12 @@ public class CartItem {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "product_id")
+    @ManyToOne(fetch = FetchType.LAZY)
     private Product product;
 
     @Column(nullable = false)
     private Integer quantity;
-    private Integer status;
+
     @ManyToOne
     @JoinColumn(name = "shopping_cart_id")
     @JsonIgnore

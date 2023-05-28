@@ -1,6 +1,7 @@
 package com.example.ShopeeClone.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -8,6 +9,7 @@ import java.util.Date;
 
 @Entity
 @Data
+@JsonIgnoreProperties({"hibernateLazyInitializer"})
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -36,7 +38,7 @@ public class Product {
     private Date updatedAt;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
-
     private Category category;
+    private Long categoryid;
 
 }

@@ -32,11 +32,7 @@ public class ShoppingCartController {
     @PostMapping ("/shoppingCart")
     public ResponseEntity<ShoppingCart> getShoppingCartById(@RequestBody Long id) {
         Optional<ShoppingCart> shoppingCart = shoppingCartRepository.findById(id);
-        if (shoppingCart.isPresent()) {
-            return new ResponseEntity<>(shoppingCart.get(), HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+        return shoppingCart.map(cart -> new ResponseEntity<>(cart, HttpStatus.OK)).orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
 
@@ -44,10 +40,16 @@ public class ShoppingCartController {
     public ResponseEntity<ResponseObject> addShoppingCart(@RequestBody Long id) {
         Optional<User> findUser = userRepositories.findById(id);
         ShoppingCart shoppingCart = new ShoppingCart();
+        if(findUser.isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    new ResponseObject("flied ", " user ko tồn tại", "")
+            );
+        }
         shoppingCart.setUser(findUser.get());
         shoppingCartRepository.save(shoppingCart);
+        Optional<User> user = userRepositories.findByShoppingCart(shoppingCart);
         return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject("ok ", " đã tạo shopping cart mới ", shoppingCart)
+                new ResponseObject("ok ", " đã tạo shopping cart mới ", user.get())
         );
     }
 

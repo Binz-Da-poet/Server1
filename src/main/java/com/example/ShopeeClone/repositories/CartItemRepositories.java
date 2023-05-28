@@ -10,9 +10,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CartItemRepositories extends JpaRepository<CartItem,Long> {
-    Optional<CartItem> findByProductAndShoppingCartAndStatus(Product product, ShoppingCart shoppingCart,Integer Status);
+
 
     List<CartItem> findByShoppingCart(ShoppingCart shoppingCart);
 
-    ArrayList<CartItem> findByShoppingCartAndStatus(ShoppingCart shoppingCart, Integer status);
+
+
+    Optional<CartItem> findByProduct(Product product);
+
+    Optional<CartItem> findByProductAndShoppingCart(Product product, ShoppingCart shoppingCart);
 }

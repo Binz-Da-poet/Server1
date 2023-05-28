@@ -17,8 +17,9 @@ public class ShoppingCart {
 
     @OneToMany(mappedBy = "shoppingCart", cascade = CascadeType.ALL)
     private List<CartItem> cartItems;
-
-    @ManyToOne
+    @OneToMany(mappedBy = "shoppingCart", cascade = CascadeType.ALL)
+    private List<DeliveryCart> deliveryCarts;
+    @OneToOne
     @JoinColumn(name = "user_id")
     @JsonIgnore
     private User user;
